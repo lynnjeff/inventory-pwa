@@ -3,7 +3,7 @@ import { Header } from '../components/Header'
 import { btn, card } from '../components/ui'
 import { useApp } from '../lib/AppContext'
 import { parseInventoryCsv } from '../lib/csv'
-import { readLegacyItems } from '../lib/db'
+import { mapLegacyItem, readLegacyItems } from '../lib/legacy'
 import type { ItemFields } from '../lib/types'
 
 export default function Import() {
@@ -27,17 +27,7 @@ export default function Import() {
     setErr(null); setMsg(null)
     const legacy = await readLegacyItems()
     if (!legacy.length) return setErr('No data from the old app was found on this device.')
-    setRows(legacy.map((l) => {
-      const bc = String(l.barcode ?? '').trim()
-      return {
-        barcode: bc && bc !== 'UNKNOWN' ? bc : null,
-        name: String(l.name ?? '').trim() || 'Unnamed item',
-        quantity: Math.max(0, Math.floor(Number(l.quantity) || 0)),
-        target_quantity: Math.max(0, Math.floor(Number(l.targetQuantity) || 0)),
-        location: (l.location as string) || null,
-        notes: (l.notes as string) || null,
-      }
-    }))
+    setRows(legacy.map((row) => mapLegacyItem(row)))
   }
 
   const run = async () => {

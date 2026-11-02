@@ -5,7 +5,15 @@ import App from './App'
 import { AppProvider } from './lib/AppContext'
 import './index.css'
 
-registerSW({ immediate: true })
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, registration) {
+    if (!registration) return
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void registration.update()
+    })
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

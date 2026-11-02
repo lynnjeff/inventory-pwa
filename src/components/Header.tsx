@@ -13,6 +13,7 @@ export function Header({ title, showScan, back }: { title: string; showScan?: bo
           className={`rounded-full px-2 py-0.5 text-xs ${online ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}>
           {online ? 'Online' : 'Offline'}{pending ? ` · ${pending} pending` : ''}
         </button>
+        <Link to="/settings" className="rounded-lg border border-slate-700 px-2 py-1 text-sm text-slate-300">Settings</Link>
         {showScan && <Link to="/scan" className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium">Scan</Link>}
       </div>
       {orgs.length > 0 && (

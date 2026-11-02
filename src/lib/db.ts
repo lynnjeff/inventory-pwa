@@ -17,15 +17,3 @@ class CacheDB extends Dexie {
 }
 
 export const cache = new CacheDB()
-
-/** Read the legacy (v1 app) local DB, if present on this device, for one-time upload. */
-export async function readLegacyItems(): Promise<Array<Record<string, unknown>>> {
-  if (!(await Dexie.exists('inventoryDB'))) return []
-  const legacy = new Dexie('inventoryDB')
-  legacy.version(2).stores({ items: 'id, name, barcode, quantity, targetQuantity, lastUpdated' })
-  try {
-    return await legacy.table('items').toArray()
-  } finally {
-    legacy.close()
-  }
-}

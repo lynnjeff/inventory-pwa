@@ -10,7 +10,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
-      workbox: { maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, navigateFallback: 'index.html' },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallback: 'index.html',
+      },
       manifest: {
         name: 'Inventory Tracker',
         short_name: 'Inventory',
