@@ -43,8 +43,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   orgRef.current = orgId
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setAuthLoading(false) })
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    // INITIAL_SESSION restores the PWA localStorage session (and a magic-link
+    // URL, via detectSessionInUrl) without a later getSession() call overwriting it.
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next)
+      setAuthLoading(false)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
