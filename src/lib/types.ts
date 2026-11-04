@@ -6,6 +6,8 @@ export interface Item {
   id: string
   org_id: string
   barcode: string | null
+  part_number?: string | null
+  brand?: string | null
   name: string
   quantity: number
   target_quantity: number

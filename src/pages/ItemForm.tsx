@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { btn, card, input } from '../components/ui'
 import { useApp } from '../lib/AppContext'
@@ -67,6 +67,7 @@ export default function ItemForm() {
             <div className={card}>
               <p className="text-sm text-slate-400">Stock summary</p>
               <p className="mt-1">On hand <b>{item.quantity}</b> · Target <b>{item.target_quantity}</b> · Order <b>{Math.max(item.target_quantity - item.quantity, 0)}</b></p>
+              <Link to={`/item/${item.id}/history`} className="mt-2 inline-block text-sm text-sky-400">History</Link>
             </div>
           )}
           {field('Barcode', <input className={input} value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Optional" />)}
