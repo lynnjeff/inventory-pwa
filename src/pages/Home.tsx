@@ -19,7 +19,7 @@ export default function Home() {
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
     return items
-      .filter((i) => !s || i.name.toLowerCase().includes(s) || (i.barcode ?? '').toLowerCase().includes(s))
+      .filter((i) => !s || [i.part_number, i.brand, i.name, i.barcode].some((v) => (v ?? '').toLowerCase().includes(s)))
       .filter((i) => !onlyNeeds || needs(i))
       .sort((a, b) => Number(needs(b)) - Number(needs(a)) || a.name.localeCompare(b.name))
   }, [items, q, onlyNeeds])
@@ -37,7 +37,7 @@ export default function Home() {
           <button className={`${btnGhost} text-sm ${onlyNeeds ? 'border-amber-500 text-amber-300' : ''}`} onClick={() => setOnlyNeeds((v) => !v)}>Needs ordering</button>
           <button className={`${btnGhost} text-sm`} disabled={!items.length} onClick={() => { if (!exportOrderList(items, org?.name)) alert('Nothing needs ordering.') }}>Export Order List (XLSX)</button>
         </div>
-        <input className={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or barcode..." />
+        <input className={input} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search part #, brand, or name" />
         {loading ? <p className="text-slate-400">Loading…</p> : !list.length ? (
           <p className="text-slate-400">No items yet. Scan a barcode or <button className="underline" onClick={() => nav('/new')}>add one</button>.</p>
         ) : (
@@ -49,8 +49,9 @@ export default function Home() {
                 <li key={i.id} onClick={() => nav(`/item/${i.id}`)} className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/80 p-3">
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{i.name}</p>
-                      <p className="truncate text-xs text-slate-500">{i.barcode ?? 'No barcode'}{i.location ? ` · ${i.location}` : ''}</p>
+                      <p className="truncate font-semibold">{[i.part_number, i.brand].filter(Boolean).join(' · ') || i.name}</p>
+                      <p className="truncate text-sm text-slate-300">{i.name}</p>
+                      <p className="truncate text-xs text-slate-500">{i.barcode ? `Barcode ${i.barcode}` : 'No barcode'}{i.location ? ` · ${i.location}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button className="h-9 w-9 rounded-lg bg-slate-800 text-lg disabled:opacity-40" disabled={i.quantity <= 0} onClick={() => setPending({ id: i.id, from: i.quantity, delta: -1 })}>-</button>

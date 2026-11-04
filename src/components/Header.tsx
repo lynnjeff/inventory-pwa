@@ -14,7 +14,7 @@ export function Header({ title, showScan, back }: { title: string; showScan?: bo
           {online ? 'Online' : 'Offline'}{pending ? ` · ${pending} pending` : ''}
         </button>
         <Link to="/settings" className="rounded-lg border border-slate-700 px-2 py-1 text-sm text-slate-300">Settings</Link>
-        {showScan && <Link to="/scan" className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium">Scan</Link>}
+        {showScan && <Link to="/scan" className="rounded-lg border border-slate-700 px-2 py-1 text-sm text-slate-400">Scan</Link>}
       </div>
       {orgs.length > 0 && (
         <div className="mx-auto mt-2 flex max-w-2xl items-center gap-2 text-sm">

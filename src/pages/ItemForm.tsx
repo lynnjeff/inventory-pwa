@@ -15,6 +15,8 @@ export default function ItemForm() {
   const item = useMemo(() => items.find((i) => i.id === id), [items, id])
   const editing = Boolean(id)
   const [barcode, setBarcode] = useState(routeBarcode ?? sp.get('barcode') ?? '')
+  const [partNumber, setPartNumber] = useState('')
+  const [brand, setBrand] = useState('')
   const [name, setName] = useState('')
   const [qty, setQty] = useState('0')
   const [loadedQty, setLoadedQty] = useState(0)
@@ -27,7 +29,7 @@ export default function ItemForm() {
 
   useEffect(() => {
     if (item && !loaded) {
-      setBarcode(item.barcode ?? ''); setName(item.name); setQty(String(item.quantity)); setLoadedQty(item.quantity)
+      setBarcode(item.barcode ?? ''); setPartNumber(item.part_number ?? ''); setBrand(item.brand ?? ''); setName(item.name); setQty(String(item.quantity)); setLoadedQty(item.quantity)
       setTarget(String(item.target_quantity)); setLocation(item.location ?? ''); setNotes(item.notes ?? '')
       setLoaded(true)
     }
@@ -43,7 +45,7 @@ export default function ItemForm() {
     if (!Number.isInteger(t) || t < 0) return setErr('Target quantity must be a whole number ≥ 0')
     const bc = barcode.trim() || null
     if (bc && items.some((i) => i.barcode === bc && i.id !== id)) return setErr('Another item already uses this barcode')
-    const fields: ItemFields = { barcode: bc, name: name.trim(), quantity: q, target_quantity: t, location: location.trim() || null, notes: notes.trim() || null }
+    const fields: ItemFields = { barcode: bc, part_number: partNumber.trim() || null, brand: brand.trim() || null, name: name.trim(), quantity: q, target_quantity: t, location: location.trim() || null, notes: notes.trim() || null }
     if (editing && item && q !== loadedQty) {
       setPending({ fields, from: loadedQty, to: q })
       return
@@ -84,11 +86,13 @@ export default function ItemForm() {
           {item && (
             <div className={card}>
               <p className="text-sm text-slate-400">Stock summary</p>
+              {(item.part_number || item.brand) && <p className="text-lg font-semibold">{[item.part_number, item.brand].filter(Boolean).join(' · ')}</p>}
               <p className="mt-1">On hand <b>{item.quantity}</b> · Target <b>{item.target_quantity}</b> · Order <b>{Math.max(item.target_quantity - item.quantity, 0)}</b></p>
               <Link to={`/item/${item.id}/history`} className="mt-2 inline-block text-sm text-sky-400">History</Link>
             </div>
           )}
-          {field('Barcode', <input className={input} value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Optional" />)}
+          {field('Part #', <input className={`${input} text-lg font-semibold`} value={partNumber} onChange={(e) => setPartNumber(e.target.value)} placeholder="NG-100" />)}
+          {field('Brand', <input className={`${input} text-lg`} value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Acme Safety" />)}
           {field('Name', <input className={input} value={name} onChange={(e) => setName(e.target.value)} required />)}
           <div className="grid grid-cols-2 gap-3">
             {field('Quantity', <input className={input} inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} />)}
@@ -96,6 +100,7 @@ export default function ItemForm() {
           </div>
           {field('Location', <input className={input} value={location} onChange={(e) => setLocation(e.target.value)} />)}
           {field('Notes', <textarea className={input} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />)}
+          {field('Barcode (optional)', <input className={input} value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="Optional secondary id" />)}
           {pending && (
             <QtyReasonSheet from={pending.from} to={pending.to} onCancel={() => setPending(null)} onSave={(reason, note) => void confirmReason(reason, note)} />
           )}

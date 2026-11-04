@@ -16,7 +16,7 @@ export interface Item {
   updated_at: string
 }
 
-export type ItemFields = Pick<Item, 'barcode' | 'name' | 'quantity' | 'target_quantity' | 'location' | 'notes'>
+export type ItemFields = Pick<Item, 'barcode' | 'part_number' | 'brand' | 'name' | 'quantity' | 'target_quantity' | 'location' | 'notes'>
 
 export type Mutation =
   | { kind: 'insert'; item: Item }

@@ -3,7 +3,7 @@ import { typedQuantityDelta } from './quantity'
 import { supabase } from './supabase'
 import type { Item, ItemFields, Mutation } from './types'
 
-const COLS = 'id, org_id, barcode, name, quantity, target_quantity, location, notes, updated_at'
+const COLS = 'id, org_id, part_number, brand, barcode, name, quantity, target_quantity, location, notes, updated_at'
 
 /** Apply a mutation to the local cache immediately (optimistic). */
 export async function applyLocal(m: Mutation) {
