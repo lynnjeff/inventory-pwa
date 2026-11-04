@@ -21,8 +21,8 @@ interface Ctx {
   pending: number
   addItem: (f: ItemFields) => Promise<Item>
   updateItem: (id: string, patch: Partial<ItemFields>) => Promise<void>
-  saveItem: (id: string, fields: ItemFields, loadedQuantity: number) => Promise<void>
-  adjustQuantity: (id: string, delta: number) => Promise<void>
+  saveItem: (id: string, fields: ItemFields, loadedQuantity: number, reason?: string | null, note?: string | null) => Promise<void>
+  adjustQuantity: (id: string, delta: number, reason?: string | null, note?: string | null) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   markOrderReceived: () => Promise<void>
   syncNow: () => Promise<void>
@@ -131,8 +131,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return item
     },
     updateItem: async (id, patch) => { await enqueue(requireOrg(), { kind: 'update', id, patch }) },
-    saveItem: async (id, fields, loadedQuantity) => { await saveItemEdit(requireOrg(), id, fields, loadedQuantity) },
-    adjustQuantity: async (id, delta) => { await enqueue(requireOrg(), { kind: 'adjust', id, delta }) },
+    saveItem: async (id, fields, loadedQuantity, reason, note) => { await saveItemEdit(requireOrg(), id, fields, loadedQuantity, reason, note) },
+    adjustQuantity: async (id, delta, reason, note) => { await enqueue(requireOrg(), { kind: 'adjust', id, delta, reason, note }) },
     deleteItem: async (id) => { await enqueue(requireOrg(), { kind: 'delete', id }) },
     markOrderReceived: async () => { const o = requireOrg(); await enqueue(o, { kind: 'order_received', org_id: o }) },
     syncNow: async () => { await flushOutbox(); if (orgId) await pullOrg(orgId) },

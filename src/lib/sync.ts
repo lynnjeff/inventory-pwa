@@ -35,11 +35,18 @@ export async function enqueue(org_id: string, m: Mutation) {
 }
 
 /** Save an item edit. Quantity is a delta from the loaded value, via the same adjust queue as +/-. */
-export async function saveItemEdit(orgId: string, id: string, fields: ItemFields, loadedQuantity: number) {
+export async function saveItemEdit(
+  orgId: string,
+  id: string,
+  fields: ItemFields,
+  loadedQuantity: number,
+  reason?: string | null,
+  note?: string | null,
+) {
   const { quantity, ...patch } = fields
   await enqueue(orgId, { kind: 'update', id, patch })
   const delta = typedQuantityDelta(loadedQuantity, quantity)
-  if (delta !== 0) await enqueue(orgId, { kind: 'adjust', id, delta })
+  if (delta !== 0) await enqueue(orgId, { kind: 'adjust', id, delta, reason: reason ?? null, note: note ?? null })
 }
 
 async function send(m: Mutation) {
@@ -57,7 +64,9 @@ async function send(m: Mutation) {
       return
     }
     case 'adjust': {
-      const { error } = await supabase.rpc('adjust_quantity', { p_item_id: m.id, p_delta: m.delta })
+      const { error } = await supabase.rpc('adjust_quantity', {
+        p_item_id: m.id, p_delta: m.delta, p_reason: m.reason ?? null, p_note: m.note ?? null,
+      })
       if (error) throw error
       return
     }

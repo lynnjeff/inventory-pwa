@@ -7,7 +7,7 @@ import { mapLegacyItem, readLegacyItems } from '../lib/legacy'
 import type { ItemFields } from '../lib/types'
 
 export default function Import() {
-  const { items, addItem, updateItem, syncNow } = useApp()
+  const { items, addItem, saveItem, syncNow } = useApp()
   const [rows, setRows] = useState<ItemFields[]>([])
   const [err, setErr] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -36,7 +36,7 @@ export default function Import() {
       let created = 0, updated = 0
       for (const r of rows) {
         const hit = r.barcode ? items.find((i) => i.barcode === r.barcode) : undefined
-        if (hit) { await updateItem(hit.id, r); updated++ } else { await addItem(r); created++ }
+        if (hit) { await saveItem(hit.id, r, hit.quantity, 'count_correction', 'CSV import'); updated++ } else { await addItem(r); created++ }
       }
       await syncNow().catch(() => undefined)
       setMsg(`Import complete: ${created} created, ${updated} updated.`); setRows([])

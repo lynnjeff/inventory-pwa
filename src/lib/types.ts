@@ -21,7 +21,7 @@ export type ItemFields = Pick<Item, 'barcode' | 'name' | 'quantity' | 'target_qu
 export type Mutation =
   | { kind: 'insert'; item: Item }
   | { kind: 'update'; id: string; patch: Partial<ItemFields> }
-  | { kind: 'adjust'; id: string; delta: number }
+  | { kind: 'adjust'; id: string; delta: number; reason?: string | null; note?: string | null }
   | { kind: 'delete'; id: string }
   | { kind: 'order_received'; org_id: string }
 

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
+import { QtyReasonSheet } from '../components/QtyReasonSheet'
 import { btnGhost, input } from '../components/ui'
+import type { QtyReasonId } from '../lib/quantity'
 import { useApp } from '../lib/AppContext'
 import { exportOrderList } from '../lib/exportXlsx'
 import type { Item } from '../lib/types'
@@ -12,6 +14,7 @@ export default function Home() {
   const { items, loading, org, adjustQuantity, markOrderReceived } = useApp()
   const [q, setQ] = useState('')
   const [onlyNeeds, setOnlyNeeds] = useState(false)
+  const [pending, setPending] = useState<{ id: string; from: number; delta: number } | null>(null)
   const nav = useNavigate()
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
@@ -50,8 +53,8 @@ export default function Home() {
                       <p className="truncate text-xs text-slate-500">{i.barcode ?? 'No barcode'}{i.location ? ` · ${i.location}` : ''}</p>
                     </div>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button className="h-9 w-9 rounded-lg bg-slate-800 text-lg disabled:opacity-40" disabled={i.quantity <= 0} onClick={() => void adjustQuantity(i.id, -1)}>-</button>
-                      <button className="h-9 w-9 rounded-lg bg-slate-800 text-lg" onClick={() => void adjustQuantity(i.id, 1)}>+</button>
+                      <button className="h-9 w-9 rounded-lg bg-slate-800 text-lg disabled:opacity-40" disabled={i.quantity <= 0} onClick={() => setPending({ id: i.id, from: i.quantity, delta: -1 })}>-</button>
+                      <button className="h-9 w-9 rounded-lg bg-slate-800 text-lg" onClick={() => setPending({ id: i.id, from: i.quantity, delta: 1 })}>+</button>
                     </div>
                   </div>
                   <div className="mt-2 grid grid-cols-3 text-center text-xs text-slate-400">
@@ -63,6 +66,14 @@ export default function Home() {
               )
             })}
           </ul>
+        )}
+        {pending && (
+          <QtyReasonSheet
+            from={pending.from}
+            to={Math.max(0, pending.from + pending.delta)}
+            onCancel={() => setPending(null)}
+            onSave={(reason: QtyReasonId, note) => { void adjustQuantity(pending.id, pending.delta, reason, note || null); setPending(null) }}
+          />
         )}
         <div className="flex flex-wrap gap-2 pt-2">
           <button className={btnGhost} disabled={!items.length} onClick={() => void received()}>Mark order received (reset to target)</button>

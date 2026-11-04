@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Header } from '../components/Header'
+import { QtyReasonSheet } from '../components/QtyReasonSheet'
 import { btn, card, input } from '../components/ui'
+import type { QtyReasonId } from '../lib/quantity'
+import type { ItemFields } from '../lib/types'
 import { useApp } from '../lib/AppContext'
 
 export default function ItemForm() {
@@ -20,6 +23,7 @@ export default function ItemForm() {
   const [notes, setNotes] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [pending, setPending] = useState<{ fields: ItemFields; from: number; to: number } | null>(null)
 
   useEffect(() => {
     if (item && !loaded) {
@@ -39,13 +43,27 @@ export default function ItemForm() {
     if (!Number.isInteger(t) || t < 0) return setErr('Target quantity must be a whole number ≥ 0')
     const bc = barcode.trim() || null
     if (bc && items.some((i) => i.barcode === bc && i.id !== id)) return setErr('Another item already uses this barcode')
-    const fields = { barcode: bc, name: name.trim(), quantity: q, target_quantity: t, location: location.trim() || null, notes: notes.trim() || null }
+    const fields: ItemFields = { barcode: bc, name: name.trim(), quantity: q, target_quantity: t, location: location.trim() || null, notes: notes.trim() || null }
+    if (editing && item && q !== loadedQty) {
+      setPending({ fields, from: loadedQty, to: q })
+      return
+    }
     try {
       if (editing && item) await saveItem(item.id, fields, loadedQty)
       else await addItem(fields)
       nav('/')
     } catch (ex) {
       console.error(ex); setErr('Failed to save item. Please try again.')
+    }
+  }
+
+  const confirmReason = async (reason: QtyReasonId, note: string) => {
+    if (!pending || !item) return
+    try {
+      await saveItem(item.id, pending.fields, pending.from, reason, note || null)
+      nav('/')
+    } catch (ex) {
+      console.error(ex); setErr('Failed to save item. Please try again.'); setPending(null)
     }
   }
 
@@ -78,6 +96,9 @@ export default function ItemForm() {
           </div>
           {field('Location', <input className={input} value={location} onChange={(e) => setLocation(e.target.value)} />)}
           {field('Notes', <textarea className={input} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />)}
+          {pending && (
+            <QtyReasonSheet from={pending.from} to={pending.to} onCancel={() => setPending(null)} onSave={(reason, note) => void confirmReason(reason, note)} />
+          )}
           <div className="flex gap-2">
             <button className={`${btn} flex-1`}>Save</button>
             {item && canDelete && <button type="button" onClick={() => void remove()} className="rounded-lg border border-red-500/50 px-4 py-2 text-red-300">Delete</button>}
