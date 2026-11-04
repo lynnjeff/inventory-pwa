@@ -93,7 +93,7 @@ const listeners = new Set<() => void>()
 export function onSyncChange(fn: () => void) { listeners.add(fn); return () => { listeners.delete(fn) } }
 const notify = () => listeners.forEach((f) => f())
 
-/** Send queued mutations in order. Network errors stop the flush; server rejections are dropped and recorded. */
+/** Send queued mutations in order. Network errors stop the flush. Server rejections stay on this device. */
 export function flushOutbox(): Promise<void> {
   if (flushing) return flushing
   flushing = (async () => {
@@ -103,14 +103,14 @@ export function flushOutbox(): Promise<void> {
       if (!data.session) return
       const entries = await cache.outbox.orderBy('seq').toArray()
       for (const e of entries) {
+        if (e.error) continue
         try {
           await send(e.mutation)
           await cache.outbox.delete(e.seq!)
         } catch (err) {
           if (isNetworkError(err)) break
           console.error('Sync rejected', e, err)
-          await cache.meta.put({ key: `rejected:${e.seq}`, value: JSON.stringify({ e, err: String((err as Error)?.message ?? err) }) })
-          await cache.outbox.delete(e.seq!)
+          await cache.outbox.update(e.seq!, { error: String((err as Error)?.message ?? err) })
         }
       }
     } finally {
@@ -119,6 +119,27 @@ export function flushOutbox(): Promise<void> {
     }
   })()
   return flushing
+}
+
+export async function listSyncErrors() {
+  return (await cache.outbox.toArray()).filter((entry) => entry.error)
+}
+
+export function mutationItemId(m: Mutation): string | null {
+  if (m.kind === 'insert') return m.item.id
+  if (m.kind === 'update' || m.kind === 'adjust' || m.kind === 'delete') return m.id
+  return null
+}
+
+export async function retryFailed(): Promise<void> {
+  const failed = await listSyncErrors()
+  await cache.transaction('rw', cache.outbox, async () => {
+    for (const entry of failed) {
+      if (entry.seq == null) continue
+      await cache.outbox.where('seq').equals(entry.seq).modify((row) => { delete row.error })
+    }
+  })
+  await flushOutbox()
 }
 
 /** Replace the cache for an org with server truth, then re-apply any still-pending local mutations. */

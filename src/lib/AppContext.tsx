@@ -3,8 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cache } from './db'
 import { supabase } from './supabase'
-import { enqueue, flushOutbox, onSyncChange, pendingCount, pullOrg, saveItemEdit, startAutoSync } from './sync'
-import type { Item, ItemFields, Org } from './types'
+import { enqueue, flushOutbox, listSyncErrors, mutationItemId, onSyncChange, pendingCount, pullOrg, retryFailed, saveItemEdit, startAutoSync } from './sync'
+import type { Item, ItemFields, Org, OutboxEntry } from './types'
 import { uuid } from './uuid'
 
 interface Ctx {
@@ -19,6 +19,9 @@ interface Ctx {
   loading: boolean
   online: boolean
   pending: number
+  syncErrors: OutboxEntry[]
+  unsavedItemIds: string[]
+  retrySync: () => Promise<void>
   addItem: (f: ItemFields) => Promise<Item>
   updateItem: (id: string, patch: Partial<ItemFields>) => Promise<void>
   saveItem: (id: string, fields: ItemFields, loadedQuantity: number, reason?: string | null, note?: string | null) => Promise<void>
@@ -40,6 +43,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState(navigator.onLine)
   const [pending, setPending] = useState(0)
+  const [syncErrors, setSyncErrors] = useState<OutboxEntry[]>([])
   const orgRef = useRef(orgId)
   orgRef.current = orgId
 
@@ -59,7 +63,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down) }
   }, [])
 
-  const refreshPending = useCallback(() => { void pendingCount().then(setPending) }, [])
+  const refreshPending = useCallback(() => {
+    void pendingCount().then(setPending)
+    void listSyncErrors().then(setSyncErrors)
+  }, [])
   useEffect(() => onSyncChange(refreshPending), [refreshPending])
 
   const setOrgId = useCallback((id: string) => { localStorage.setItem(ORG_KEY, id); setOrgIdState(id) }, [])
@@ -124,7 +131,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOrgId(o.id)
       return { id: o.id, name: o.name, role: 'owner' }
     },
-    items, loading, online, pending,
+    items, loading, online, pending, syncErrors,
+    unsavedItemIds: [...new Set(syncErrors.map((entry) => mutationItemId(entry.mutation)).filter((id): id is string => Boolean(id)))],
+    retrySync: async () => { await retryFailed() },
     addItem: async (f) => {
       const item: Item = { id: uuid(), org_id: requireOrg(), updated_at: new Date().toISOString(), ...f }
       await enqueue(item.org_id, { kind: 'insert', item })

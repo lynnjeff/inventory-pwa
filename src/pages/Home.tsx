@@ -11,7 +11,7 @@ import type { Item } from '../lib/types'
 const needs = (i: Item) => i.target_quantity - i.quantity > 0
 
 export default function Home() {
-  const { items, loading, org, adjustQuantity, markOrderReceived } = useApp()
+  const { items, loading, org, adjustQuantity, markOrderReceived, unsavedItemIds } = useApp()
   const [q, setQ] = useState('')
   const [onlyNeeds, setOnlyNeeds] = useState(false)
   const [pending, setPending] = useState<{ id: string; from: number; delta: number } | null>(null)
@@ -49,7 +49,10 @@ export default function Home() {
                 <li key={i.id} onClick={() => nav(`/item/${i.id}`)} className="cursor-pointer rounded-xl border border-slate-800 bg-slate-900/80 p-3">
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{[i.part_number, i.brand].filter(Boolean).join(' · ') || i.name}</p>
+                      <p className="truncate font-semibold">
+                        {[i.part_number, i.brand].filter(Boolean).join(' · ') || i.name}
+                        {unsavedItemIds.includes(i.id) && <span className="ml-2 rounded bg-amber-500/20 px-1.5 py-0.5 text-xs font-medium text-amber-200">unsaved</span>}
+                      </p>
                       <p className="truncate text-sm text-slate-300">{i.name}</p>
                       <p className="truncate text-xs text-slate-500">{i.barcode ? `Barcode ${i.barcode}` : 'No barcode'}{i.location ? ` · ${i.location}` : ''}</p>
                     </div>
