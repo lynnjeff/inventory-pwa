@@ -8,12 +8,13 @@ export default function ItemForm() {
   const { id, barcode: routeBarcode } = useParams()
   const [sp] = useSearchParams()
   const nav = useNavigate()
-  const { items, org, addItem, updateItem, deleteItem } = useApp()
+  const { items, org, addItem, saveItem, deleteItem } = useApp()
   const item = useMemo(() => items.find((i) => i.id === id), [items, id])
   const editing = Boolean(id)
   const [barcode, setBarcode] = useState(routeBarcode ?? sp.get('barcode') ?? '')
   const [name, setName] = useState('')
   const [qty, setQty] = useState('0')
+  const [loadedQty, setLoadedQty] = useState(0)
   const [target, setTarget] = useState('0')
   const [location, setLocation] = useState('')
   const [notes, setNotes] = useState('')
@@ -22,7 +23,7 @@ export default function ItemForm() {
 
   useEffect(() => {
     if (item && !loaded) {
-      setBarcode(item.barcode ?? ''); setName(item.name); setQty(String(item.quantity))
+      setBarcode(item.barcode ?? ''); setName(item.name); setQty(String(item.quantity)); setLoadedQty(item.quantity)
       setTarget(String(item.target_quantity)); setLocation(item.location ?? ''); setNotes(item.notes ?? '')
       setLoaded(true)
     }
@@ -40,7 +41,7 @@ export default function ItemForm() {
     if (bc && items.some((i) => i.barcode === bc && i.id !== id)) return setErr('Another item already uses this barcode')
     const fields = { barcode: bc, name: name.trim(), quantity: q, target_quantity: t, location: location.trim() || null, notes: notes.trim() || null }
     try {
-      if (editing && item) await updateItem(item.id, fields)
+      if (editing && item) await saveItem(item.id, fields, loadedQty)
       else await addItem(fields)
       nav('/')
     } catch (ex) {

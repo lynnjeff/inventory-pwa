@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cache } from './db'
 import { supabase } from './supabase'
-import { enqueue, flushOutbox, onSyncChange, pendingCount, pullOrg, startAutoSync } from './sync'
+import { enqueue, flushOutbox, onSyncChange, pendingCount, pullOrg, saveItemEdit, startAutoSync } from './sync'
 import type { Item, ItemFields, Org } from './types'
 import { uuid } from './uuid'
 
@@ -21,6 +21,7 @@ interface Ctx {
   pending: number
   addItem: (f: ItemFields) => Promise<Item>
   updateItem: (id: string, patch: Partial<ItemFields>) => Promise<void>
+  saveItem: (id: string, fields: ItemFields, loadedQuantity: number) => Promise<void>
   adjustQuantity: (id: string, delta: number) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   markOrderReceived: () => Promise<void>
@@ -130,6 +131,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return item
     },
     updateItem: async (id, patch) => { await enqueue(requireOrg(), { kind: 'update', id, patch }) },
+    saveItem: async (id, fields, loadedQuantity) => { await saveItemEdit(requireOrg(), id, fields, loadedQuantity) },
     adjustQuantity: async (id, delta) => { await enqueue(requireOrg(), { kind: 'adjust', id, delta }) },
     deleteItem: async (id) => { await enqueue(requireOrg(), { kind: 'delete', id }) },
     markOrderReceived: async () => { const o = requireOrg(); await enqueue(o, { kind: 'order_received', org_id: o }) },

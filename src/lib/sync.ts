@@ -1,6 +1,7 @@
 import { cache } from './db'
+import { typedQuantityDelta } from './quantity'
 import { supabase } from './supabase'
-import type { Item, Mutation } from './types'
+import type { Item, ItemFields, Mutation } from './types'
 
 const COLS = 'id, org_id, barcode, name, quantity, target_quantity, location, notes, updated_at'
 
@@ -31,6 +32,14 @@ export async function enqueue(org_id: string, m: Mutation) {
   await applyLocal(m)
   await cache.outbox.add({ org_id, createdAt: Date.now(), mutation: m })
   void flushOutbox()
+}
+
+/** Save an item edit. Quantity is a delta from the loaded value, via the same adjust queue as +/-. */
+export async function saveItemEdit(orgId: string, id: string, fields: ItemFields, loadedQuantity: number) {
+  const { quantity, ...patch } = fields
+  await enqueue(orgId, { kind: 'update', id, patch })
+  const delta = typedQuantityDelta(loadedQuantity, quantity)
+  if (delta !== 0) await enqueue(orgId, { kind: 'adjust', id, delta })
 }
 
 async function send(m: Mutation) {
