@@ -23,7 +23,10 @@ export async function applyLocal(m: Mutation) {
       await cache.items.delete(m.id)
       break
     case 'order_received':
-      await cache.items.where('org_id').equals(m.org_id).modify((it) => { it.quantity = it.target_quantity })
+      await cache.items.where('org_id').equals(m.org_id).modify((it) => {
+        if (it.quantity >= it.target_quantity) return false
+        it.quantity = it.target_quantity
+      })
       break
   }
 }
