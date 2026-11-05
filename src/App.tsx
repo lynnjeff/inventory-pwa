@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { LegacyBanner, LegacyRescueProvider } from './components/LegacyRescue'
+import { SyncIssues } from './components/SyncIssues'
 import { useApp } from './lib/AppContext'
+import History from './pages/History'
 import Home from './pages/Home'
 import Import from './pages/Import'
 import ItemForm from './pages/ItemForm'
@@ -17,6 +19,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <LegacyRescueProvider>
+        <SyncIssues />
         <LegacyBanner />
         <Routes>
           {!org && orgs.length === 0 ? (
@@ -29,7 +32,8 @@ export default function App() {
             <>
               <Route path="/" element={<Home />} />
               <Route path="/scan" element={<Scan />} />
-              <Route path="/item/:id" element={<ItemForm />} />
+              <Route path="/item/:id/history" element={<History />} />
+            <Route path="/item/:id" element={<ItemForm />} />
               <Route path="/new/:barcode?" element={<ItemForm />} />
               <Route path="/import" element={<Import />} />
               <Route path="/orgs" element={<Orgs />} />
