@@ -25,7 +25,7 @@ export default function Home() {
   }, [items, q, onlyNeeds])
 
   const received = async () => {
-    if (window.confirm('Mark order received? Every item quantity will be set to its target.')) await markOrderReceived()
+    if (window.confirm('Mark order received? Items below target are filled up to their target. Items already at or above target stay as they are.')) await markOrderReceived()
   }
 
   return (
