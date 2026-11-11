@@ -1,6 +1,7 @@
 import { cache } from './db'
 import { typedQuantityDelta } from './quantity'
 import { supabase } from './supabase'
+import { uuid } from './uuid'
 import type { Item, ItemFields, Mutation } from './types'
 
 const COLS = 'id, org_id, part_number, brand, barcode, name, quantity, target_quantity, location, notes, updated_at'
@@ -32,8 +33,12 @@ export async function applyLocal(m: Mutation) {
 }
 
 export async function enqueue(org_id: string, m: Mutation) {
+  const { data } = await supabase.auth.getSession()
+  const user_id = data.session?.user.id
+  // Per-mutation idempotency key so a retried request cannot apply a quantity change twice.
+  if (m.kind === 'adjust' && !m.key) m = { ...m, key: uuid() }
   await applyLocal(m)
-  await cache.outbox.add({ org_id, createdAt: Date.now(), mutation: m })
+  await cache.outbox.add({ org_id, user_id, createdAt: Date.now(), mutation: m })
   void flushOutbox()
 }
 
@@ -69,6 +74,7 @@ async function send(m: Mutation) {
     case 'adjust': {
       const { error } = await supabase.rpc('adjust_quantity', {
         p_item_id: m.id, p_delta: m.delta, p_reason: m.reason ?? null, p_note: m.note ?? null,
+        p_idempotency_key: m.key ?? null,
       })
       if (error) throw error
       return
@@ -104,7 +110,12 @@ export function flushOutbox(): Promise<void> {
       if (!navigator.onLine) return
       const { data } = await supabase.auth.getSession()
       if (!data.session) return
-      const entries = await cache.outbox.orderBy('seq').toArray()
+      const uid = data.session.user.id
+      // Outbox is scoped per user: never send (or show) another account's queued changes.
+      // Entries queued before scoping existed have no owner; they belong to this device's current user.
+      const all = await cache.outbox.orderBy('seq').toArray()
+      for (const e of all) if (!e.user_id && e.seq != null) { await cache.outbox.update(e.seq, { user_id: uid }); e.user_id = uid }
+      const entries = all.filter((e) => e.user_id === uid)
       for (const e of entries) {
         if (e.error) continue
         try {
@@ -125,7 +136,12 @@ export function flushOutbox(): Promise<void> {
 }
 
 export async function listSyncErrors() {
-  return (await cache.outbox.toArray()).filter((entry) => entry.error)
+  const uid = await currentUserId()
+  return (await cache.outbox.toArray()).filter((entry) => entry.error && (!entry.user_id || entry.user_id === uid))
+}
+
+async function currentUserId() {
+  return (await supabase.auth.getSession()).data.session?.user.id
 }
 
 export function mutationItemId(m: Mutation): string | null {
@@ -159,7 +175,35 @@ export async function pullOrg(org_id: string): Promise<void> {
 }
 
 export async function pendingCount(): Promise<number> {
-  return cache.outbox.count()
+  const uid = await currentUserId()
+  return (await cache.outbox.toArray()).filter((e) => !e.user_id || e.user_id === uid).length
+}
+
+const ORG_KEY = 'inventory.currentOrg'
+
+/** Remove every locally stored trace of the session: cached items, outbox, orgs, saved org. */
+export async function wipeLocalData() {
+  try { await cache.transaction('rw', cache.items, cache.outbox, cache.meta, async () => {
+    await Promise.all([cache.items.clear(), cache.outbox.clear(), cache.meta.clear()])
+  }) } catch (e) { console.warn('wipe failed', e) }
+  localStorage.removeItem(ORG_KEY)
+}
+
+/** If a different user signs in on this device, drop the previous user's cache/outbox first. */
+export async function adoptUser(userId: string) {
+  const prev = await cache.meta.get('userId')
+  if (prev && prev.value !== userId) await wipeLocalData()
+  if (!prev || prev.value !== userId) await cache.meta.put({ key: 'userId', value: userId })
+}
+
+/** Sign out and clear Dexie/IndexedDB, the outbox and the saved org. Offers to stay if changes are unsynced. */
+export async function signOutAndWipe() {
+  await flushOutbox().catch(() => undefined)
+  const left = await pendingCount()
+  if (left > 0 && !window.confirm(`${left} change${left === 1 ? '' : 's'} not yet synced will be lost if you sign out. Sign out anyway?`)) return false
+  await supabase.auth.signOut()
+  await wipeLocalData()
+  return true
 }
 
 export function startAutoSync(getOrg: () => string | null) {

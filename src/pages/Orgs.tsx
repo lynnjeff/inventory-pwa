@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/Header'
 import { btn, card, input } from '../components/ui'
 import { useApp } from '../lib/AppContext'
-import { supabase } from '../lib/supabase'
+import { signOutAndWipe } from '../lib/sync'
 
 export default function Orgs({ firstRun }: { firstRun?: boolean }) {
   const { orgs, org, setOrgId, createOrg, session } = useApp()
@@ -40,7 +40,7 @@ export default function Orgs({ firstRun }: { firstRun?: boolean }) {
           {err && <p className="text-sm text-red-400">{err}</p>}
           <button className={`${btn} w-full`} disabled={busy || !name.trim()}>Create</button>
         </form>
-        <button className="text-sm text-slate-400 underline" onClick={() => void supabase.auth.signOut()}>Sign out</button>
+        <button className="text-sm text-slate-400 underline" onClick={() => void signOutAndWipe()}>Sign out</button>
       </main>
     </div>
   )

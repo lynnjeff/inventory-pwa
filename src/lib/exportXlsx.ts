@@ -2,6 +2,13 @@ import * as XLSX from 'xlsx'
 import type { LegacyItem } from './legacy'
 import type { Item } from './types'
 
+/** Neutralise spreadsheet formula injection: text starting with = + - @ (or tab/CR) gets a leading apostrophe. */
+export function safeCell<T>(v: T): T | string {
+  return typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v
+}
+const safeRow = <R extends Record<string, unknown>>(r: R): R =>
+  Object.fromEntries(Object.entries(r).map(([k, v]) => [k, safeCell(v)])) as R
+
 const HEADER = ['Item Name', 'SKU', 'Quantity On Hand', 'Target Quantity', 'Order Quantity'] as const
 
 export function exportOrderList(items: Item[], orgName = 'inventory') {
@@ -13,7 +20,7 @@ export function exportOrderList(items: Item[], orgName = 'inventory') {
       'Target Quantity': m.target_quantity, 'Order Quantity': order,
     }))
   if (!rows.length) return false
-  const ws = XLSX.utils.json_to_sheet(rows, { header: [...HEADER] })
+  const ws = XLSX.utils.json_to_sheet(rows.map(safeRow), { header: [...HEADER] })
   ws['!cols'] = HEADER.map((h) => ({ wch: rows.reduce((w, r) => Math.max(w, String(r[h]).length), h.length) + 2 }))
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Order List')
@@ -43,7 +50,7 @@ export function downloadLegacyBackup(rows: LegacyItem[]) {
     notes: row.notes ?? '',
     lastUpdated: row.lastUpdated ?? '',
   }))
-  const ws = XLSX.utils.json_to_sheet(sheetRows, { header: [...LEGACY_HEADER] })
+  const ws = XLSX.utils.json_to_sheet(sheetRows.map(safeRow), { header: [...LEGACY_HEADER] })
   ws['!cols'] = LEGACY_HEADER.map((header) => ({
     wch: sheetRows.reduce((width, row) => Math.max(width, String(row[header]).length), header.length) + 2,
   }))

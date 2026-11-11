@@ -13,6 +13,11 @@ class CacheDB extends Dexie {
       outbox: '++seq, org_id, createdAt',
       meta: 'key',
     })
+    this.version(2).stores({
+      items: 'id, org_id, [org_id+name], [org_id+barcode], updated_at',
+      outbox: '++seq, org_id, user_id, createdAt',
+      meta: 'key',
+    })
   }
 }
 
