@@ -5,6 +5,12 @@ import App from './App'
 import { AppProvider } from './lib/AppContext'
 import './index.css'
 
+// Clickjacking fallback for hosts that do not apply the frame-ancestors header.
+if (window.top && window.top !== window.self) {
+  document.documentElement.style.display = 'none'
+  try { window.top.location.href = window.self.location.href } catch { /* cross-origin: stay hidden */ }
+}
+
 registerSW({
   immediate: true,
   onRegisteredSW(_url, registration) {

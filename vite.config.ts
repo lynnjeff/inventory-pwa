@@ -3,8 +3,32 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const SUPABASE_HOST = 'wfytelllvigrcjzxfgvv.supabase.co'
+export const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  `connect-src 'self' https://${SUPABASE_HOST} wss://${SUPABASE_HOST}`,
+  "media-src 'self' blob: mediastream:",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ')
+
+// Build-only <meta> CSP (frame-ancestors is header-only, set in render.yaml).
+const cspMeta = {
+  name: 'csp-meta',
+  apply: 'build' as const,
+  transformIndexHtml: (html: string) => html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP}" />`),
+}
+
 export default defineConfig({
   plugins: [
+    cspMeta,
     react(),
     tailwindcss(),
     VitePWA({

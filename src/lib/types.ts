@@ -21,8 +21,8 @@ export type ItemFields = Pick<Item, 'barcode' | 'part_number' | 'brand' | 'name'
 export type Mutation =
   | { kind: 'insert'; item: Item }
   | { kind: 'update'; id: string; patch: Partial<ItemFields> }
-  | { kind: 'adjust'; id: string; delta: number; reason?: string | null; note?: string | null }
+  | { kind: 'adjust'; id: string; delta: number; reason?: string | null; note?: string | null; key?: string }
   | { kind: 'delete'; id: string }
   | { kind: 'order_received'; org_id: string }
 
-export interface OutboxEntry { seq?: number; org_id: string; createdAt: number; mutation: Mutation; error?: string }
+export interface OutboxEntry { seq?: number; user_id?: string; org_id: string; createdAt: number; mutation: Mutation; error?: string }

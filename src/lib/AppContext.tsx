@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cache } from './db'
 import { supabase } from './supabase'
-import { enqueue, flushOutbox, listSyncErrors, mutationItemId, onSyncChange, pendingCount, pullOrg, retryFailed, saveItemEdit, startAutoSync } from './sync'
+import { adoptUser, enqueue, flushOutbox, listSyncErrors, mutationItemId, onSyncChange, pendingCount, pullOrg, retryFailed, saveItemEdit, startAutoSync, wipeLocalData } from './sync'
 import type { Item, ItemFields, Org, OutboxEntry } from './types'
 import { uuid } from './uuid'
 
@@ -50,7 +50,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // INITIAL_SESSION restores the PWA localStorage session (and a magic-link
     // URL, via detectSessionInUrl) without a later getSession() call overwriting it.
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === 'SIGNED_OUT') {
+        // Any sign-out (button, expired refresh token, other tab) clears local data.
+        void wipeLocalData()
+        setOrgs([]); setOrgIdState(null); setItems([])
+      }
+      if (next?.user) void adoptUser(next.user.id)
       setSession(next)
       setAuthLoading(false)
     })
