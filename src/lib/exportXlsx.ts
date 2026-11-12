@@ -2,9 +2,11 @@ import * as XLSX from 'xlsx'
 import type { LegacyItem } from './legacy'
 import type { Item } from './types'
 
-/** Neutralise spreadsheet formula injection: text starting with = + - @ (or tab/CR) gets a leading apostrophe. */
+// Leading whitespace, control and invisible/format characters are skipped before looking for a formula trigger.
+const FORMULA_LEAD = /^[\s\u0000-\u001f\u007f-\u009f\u00ad\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]*[=+\-@]/
+/** Neutralise spreadsheet formula injection: text that starts (after whitespace/control chars) with = + - @ gets a leading apostrophe. */
 export function safeCell<T>(v: T): T | string {
-  return typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v
+  return typeof v === 'string' && FORMULA_LEAD.test(v) ? `'${v}` : v
 }
 const safeRow = <R extends Record<string, unknown>>(r: R): R =>
   Object.fromEntries(Object.entries(r).map(([k, v]) => [k, safeCell(v)])) as R

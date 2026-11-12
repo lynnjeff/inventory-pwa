@@ -62,12 +62,15 @@ async function send(m: Mutation) {
     case 'insert': {
       const { updated_at: _u, ...row } = m.item
       void _u
-      const { error } = await supabase.from('items').upsert(row, { onConflict: 'id' })
+      const { error } = await supabase.from('items').upsert(row, { onConflict: 'id', ignoreDuplicates: true })
       if (error) throw error
       return
     }
     case 'update': {
-      const { error } = await supabase.from('items').update(m.patch).eq('id', m.id)
+      // quantity/org_id are server-controlled (quantity only via adjust_quantity); never send them in an edit.
+      const { quantity: _q, org_id: _o, ...patch } = m.patch as Record<string, unknown>
+      void _q; void _o
+      const { error } = await supabase.from('items').update(patch).eq('id', m.id)
       if (error) throw error
       return
     }
@@ -118,6 +121,11 @@ export function flushOutbox(): Promise<void> {
       const entries = all.filter((e) => e.user_id === uid)
       for (const e of entries) {
         if (e.error) continue
+        // Queued adjusts from before idempotency keys existed: assign and persist a key so retries stay safe.
+        if (e.mutation.kind === 'adjust' && !e.mutation.key && e.seq != null) {
+          e.mutation = { ...e.mutation, key: uuid() }
+          await cache.outbox.update(e.seq, { mutation: e.mutation })
+        }
         try {
           await send(e.mutation)
           await cache.outbox.delete(e.seq!)
